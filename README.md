@@ -1,6 +1,4 @@
-<div>
-	<h1 style="text-align: center">LAYNET</h1>
-</div>
+<h1 style="text-align: center;">LAYNET</h1>
 Пока всё хранится в playground проекте, так как пока что не разобрался как проверять работу этого в framework проекте.
 ## Что это такое(кратко)
 Это простой сетевой слой
