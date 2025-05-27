@@ -9,93 +9,83 @@ import Foundation
 
 
 class LayNet {
-    
-    // Типы запросов
-    enum RequestType: String {
+    enum TypeRequest: String {
         case get = "GET"
         case post = "POST"
+        case put = "PUT"
+        case delete = "DELETE"
     }
-    
     var url: String
-    var typeRequest: RequestType
-    open var request: URLRequest
-    
     init(url: String) {
         self.url = url
-        self.typeRequest = .get
-        request = URLRequest(url: URL(string: url)!)
-    }
-    
-    init(url: String, typeRequest: RequestType) {
-        self.url = url
-        self.typeRequest = typeRequest
-        self.request = URLRequest(url: URL(string: url)!)
     }
     
     // Метод отправки запроса
-    public func sendRequest(withBody body: [String: Any]? = nil) {
-        self.request.httpMethod = self.typeRequest.rawValue
-        switch self.typeRequest {
-            // Обработка GET запроса
-        case .get:
-            URLSession.shared.dataTask(with: self.request) { data, response, error in
-                // Проверка на ошибку
-                if let error = error {
-                    print("[ERROR] \(error.localizedDescription)")
-                    return
-                }
-    
-                // Вывод статус кода запроса
-                if let response = response as? HTTPURLResponse {
-                    print("Status code: \(response.statusCode)")
-                }
-                
-                // Проверка наличия данных
-                guard let data = data else {
-                    print("[ERROR] No data")
-                    return
-                }
-            
-                if let json = try? JSONSerialization.jsonObject(with: data, options: []) {
-                    print(json)
-                } else {
-                    print("[ERROR] Not can't decode JSON")
-                }
-            }.resume()
-        case .post:
-            
-            self.request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            guard let data = body else { return }
-            self.request.httpBody = try? JSONSerialization.data(withJSONObject: data)
-            URLSession.shared.dataTask(with: self.request) { data, response, error in
-                if let error = error {
-                    print("[ERROR] \(error.localizedDescription)")
-                    return
-                }
-                if let response = response as? HTTPURLResponse {
-                    print("Status code: \(response.statusCode)")
-                }
-                print(data)
-            }.resume()
+    public func sendRequest(typeRequest reqType: TypeRequest, withBody body: [String: Any]? = nil, withParams param: [String: String]? = nil, httpHeader header: [String: String]? = nil) -> [String: Any] {
+        
+        var url = self.url
+        if let param = param {
+            url += "?"
+            for (key, value) in param {
+                url += "\(key)=\(value)&"
+            }
         }
+        
+        var request = URLRequest(url: URL(string: url)!)
+        request.httpMethod = reqType.rawValue
+        if let body = body {
+            request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        }
+        if let header = header {
+            for (key, value) in header {
+                request.setValue(key, forHTTPHeaderField: value)
+            }
+        }
+        print("URL for request: \(url), method: \(request.httpMethod!), data: \(request.httpBody ?? nil), params: \(param ?? nil), header: \(header ?? nil)")
+        URLSession.shared.dataTask(with: request) { (data, response, error) in
+
+            if let error = error {
+                print("[ERROR] \(error.localizedDescription)")
+                return
+            }
+            
+            if let response = response as? HTTPURLResponse {
+                print("Status code: \(response.statusCode)")
+            }
+
+            do {
+                if let data = data {
+                    if let json = try? JSONSerialization.jsonObject(with: data, options: []) {
+                        print("Result -> \(json)")
+                    } else {
+                        print("No response data as JSON")
+                    }
+                } else {
+                    print("[ERROR] No data")
+                }
+            }  catch {
+                print("[ERROR] Json parsing error: \(error.localizedDescription)")
+            }
+        }.resume()
+        return [:]
     }
-    
-    
 }
 
-var data: [String: Any] = [
-    "id": 104,
-    "title": "foo",
-    "body": "bar",
-    "userId": 1
+let data: [String: Any] = [
+    "title": "foofddasfda",
+    "body": "baasdfasdfr",
+]
+
+let header: [String: String] = [
+    "application/json" : "Content-Type"
+]
+
+let param: [String: String] = [
+    "id" : "1"
 ]
 
 
 
-
 var laynet = LayNet(url: "https://jsonplaceholder.typicode.com/posts")
-laynet.sendRequest()
-
-laynet.typeRequest = .post
-laynet.sendRequest(withBody: data)
+laynet.sendRequest(typeRequest: LayNet.TypeRequest.get, withParams: param, httpHeader: header)
 
