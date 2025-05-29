@@ -24,10 +24,11 @@ enum TypeRequest: String {
 ## Метод запроса
 ```Swift
 public func sendRequest(
-    typeRequest reqType: TypeRequest, 
-    withBody body: [String: Any]? = nil, 
-    withParametrs parametrs: [String: String]? = nil, 
-    httpHeader header: [String: String]? = nil) -> [String: Any]
+    typeRequest reqType: TypeRequest,
+    withBody body: [String: Any]? = nil,
+    withParams param: [String: String]? = nil,
+    httpHeader header: [String: String]? = nil,
+    completion: @escaping (Result<Data, Error>) -> Any)
 ```
 ## Создание экземпляра класса
 Ссылки для запросов используются с сайта [JSONPlaceholder](https://jsonplaceholder.typicode.com/guide/) 
@@ -39,9 +40,37 @@ var laynet = LayNet(url: "https://jsonplaceholder.typicode.com/posts")
 ### Get-запрос
 Для выполнения запроса к серверу используется метод [[#Метод запроса|sendRequest]]
 ```Swift
-var laynet = LayNet(url: "https://jsonplaceholder.typicode.com/posts")
-laynet.sendRequest(typeRequest: LayNet.TypeRequest.get)
+let header: [String: String] = [
+    "application/json" : "Content-Type"
+]
+
+var laynet = LayNet(url: "https://jsonplaceholder.typicode.com/posts/1")
+laynet.sendRequest(typeRequest: .get, httpHeader: header) { res in
+    switch res {
+    case .failure(let error):
+        print(error.localizedDescription)
+    case .success(var data):
+        guard let data = try? JSONSerialization.jsonObject(with: data) else { return }
+        print(data)
+    }
+    return "empty"
+}
 ```
+
+Результат выполнения кода
+
+```Console
+URL for request: https://jsonplaceholder.typicode.com/posts/1, method: GET, data: nil, params: nil, header: Optional(["application/json": "Content-Type"])
+Status code: 200
+{
+    body = "quia et suscipit\nsuscipit recusandae consequuntur expedita et cum\nreprehenderit molestiae ut ut quas totam\nnostrum rerum est autem sunt rem eveniet architecto";
+    id = 1;
+    title = "sunt aut facere repellat provident occaecati excepturi optio reprehenderit";
+    userId = 1;
+}
+```
+
+
 После выполнения этого кода в терминале вы увидите собранную **url**, метод, переданные body и параметры, статус код выполнения запроса
 ### Работа с body и parametrs
 Для некоторых запросов, таких как POST, требуется указать какие-то данные в тело запроса(body) или в его параметры(params), или вообще и туда и туда. Если не передавать данные параметры в функцию они принимают значение по умолчанию **nil**. Так же иногда требуется настроить header запроса, эти данные тоже принимает функция
@@ -63,13 +92,22 @@ let header: [String: String] = [
 ]
 
 var laynet = LayNet(url: "https://jsonplaceholder.typicode.com/posts")
-laynet.sendRequest(typeRequest: LayNet.TypeRequest.post, withBody: data, httpHeader: header)
+laynet.sendRequest(typeRequest: LayNet.TypeRequest.post, withBody: data, httpHeader: header) { res in
+    switch res {
+    case .failure(let error):
+        print(error.localizedDescription)
+    case .success(var data):
+        guard let data = try? JSONSerialization.jsonObject(with: data) else { return }
+        print(data)
+    }
+    return "empty"
+}
 ```
 Результат выполнения кода:
 ```Console
 URL for request: https://jsonplaceholder.typicode.com/posts, method: POST, data: Optional(65 bytes), params: nil, header: Optional(["application/json": "Content-Type"])
 Status code: 201
-Result -> {
+{
     body = baasdfasdfr;
     id = 101;
     title = foofddasfda;
@@ -87,20 +125,29 @@ let param: [String: String] = [
 ]
 
 var laynet = LayNet(url: "https://jsonplaceholder.typicode.com/posts")
-laynet.sendRequest(typeRequest: LayNet.TypeRequest.get, withParams: param, httpHeader: header)
+laynet.sendRequest(typeRequest: LayNet.TypeRequest.get, withParams: param, httpHeader: header) { res in
+    switch res {
+    case .failure(let error):
+        print(error.localizedDescription)
+    case .success(var data):
+        guard let data = try? JSONSerialization.jsonObject(with: data) else { return }
+        print(data)
+    }
+    return "empty"
+}
 ```
 Результат выполнения кода:
 ```Console
 URL for request: https://jsonplaceholder.typicode.com/posts?id=1&, method: GET, data: nil, params: Optional(["id": "1"]), header: Optional(["application/json": "Content-Type"])
 Status code: 200
-Result -> (
-        {
-        body = "quia et suscipit\nsuscipit recusandae consequuntur expedita et cum\nreprehenderit molestiae ut ut quas totam\nnostrum rerum est autem sunt rem eveniet architecto";
-        id = 1;
-        title = "sunt aut facere repellat provident occaecati excepturi optio reprehenderit";
-        userId = 1;
-    }
-)
+
+{
+    body = "quia et suscipit\nsuscipit recusandae consequuntur expedita et cum\nreprehenderit molestiae ut ut quas totam\nnostrum rerum est autem sunt rem eveniet architecto";
+    id = 1;
+    title = "sunt aut facere repellat provident occaecati excepturi optio reprehenderit";
+    userId = 1;
+}
+
 ```
 # Будущие доработки
 Требуется немного переделать передачу параметров, так как некоторые запросы, такие как put и delete могут по разному принимать параметры пути, и для этого требуется немного другой url. Так же до сих пор метод sendRequest никаких значений не возвращает а просто выводит их в терминал. 
