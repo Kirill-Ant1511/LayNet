@@ -21,8 +21,7 @@ class LayNet {
     }
     
     // Метод отправки запроса
-    public func sendRequest(typeRequest reqType: TypeRequest, withBody body: [String: Any]? = nil, withParams param: [String: String]? = nil, httpHeader header: [String: String]? = nil) -> [String: Any] {
-        
+    public func sendRequest(typeRequest reqType: TypeRequest, withBody body: [String: Any]? = nil, withParams param: [String: String]? = nil, httpHeader header: [String: String]? = nil, completion: @escaping (Result<Data, Error>) -> Any) {
         var url = self.url
         if let param = param {
             url += "?"
@@ -41,51 +40,41 @@ class LayNet {
                 request.setValue(key, forHTTPHeaderField: value)
             }
         }
-        print("URL for request: \(url), method: \(request.httpMethod!), data: \(request.httpBody ?? nil), params: \(param ?? nil), header: \(header ?? nil)")
+        print("URL for request: \(url), method: \(request.httpMethod!), data: \(String(describing: request.httpBody ?? nil)), params: \(String(describing: param ?? nil)), header: \(String(describing: header ?? nil))")
         URLSession.shared.dataTask(with: request) { (data, response, error) in
 
             if let error = error {
-                print("[ERROR] \(error.localizedDescription)")
-                return
+                completion(.failure(error))
             }
             
             if let response = response as? HTTPURLResponse {
                 print("Status code: \(response.statusCode)")
             }
 
-            do {
-                if let data = data {
-                    if let json = try? JSONSerialization.jsonObject(with: data, options: []) {
-                        print("Result -> \(json)")
-                    } else {
-                        print("No response data as JSON")
-                    }
-                } else {
-                    print("[ERROR] No data")
-                }
-            }  catch {
-                print("[ERROR] Json parsing error: \(error.localizedDescription)")
+        
+            if let data = data {
+                completion(.success(data))
+            } else {
+                print("[ERROR] No data")
             }
+        
         }.resume()
-        return [:]
     }
 }
-
-let data: [String: Any] = [
-    "title": "foofddasfda",
-    "body": "baasdfasdfr",
-]
 
 let header: [String: String] = [
     "application/json" : "Content-Type"
 ]
 
-let param: [String: String] = [
-    "id" : "1"
-]
-
-
-
-var laynet = LayNet(url: "https://jsonplaceholder.typicode.com/posts")
-laynet.sendRequest(typeRequest: LayNet.TypeRequest.get, withParams: param, httpHeader: header)
+var laynet = LayNet(url: "https://jsonplaceholder.typicode.com/posts/1")
+laynet.sendRequest(typeRequest: .get, httpHeader: header) { res in
+    switch res {
+    case .failure(let error):
+        print(error.localizedDescription)
+    case .success(var data):
+        guard let data = try? JSONSerialization.jsonObject(with: data) else { return }
+        print(data)
+    }
+    return "empty"
+}
 
